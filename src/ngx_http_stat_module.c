@@ -427,9 +427,23 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
 
     ngx_add_timer(&timer, smcf->frequency);
 
+    ngx_pool_cleanup_t *cln = ngx_pool_cleanup_add(cycle->pool, 0);
+    if (cln == NULL) {
+        return NGX_ERROR;
+    }
+    cln->handler = ngx_http_stat_cleanup;
+    cln->data = smcf;
+
     return NGX_OK;
 }
 
+static void ngx_http_stat_cleanup(void *data) {
+    ngx_http_stat_main_conf_t *smcf = data;
+
+    if (smcf->enable) {
+        ngx_del_timer(&timer);
+    }
+}
 
 static
 void *
@@ -548,7 +562,7 @@ ngx_http_stat_create_loc_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-    if (!cf->args) {
+    if (cf->args == NULL || cf->args->nelts < 1) {
         return slcf;
     }
 
