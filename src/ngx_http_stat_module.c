@@ -268,7 +268,7 @@ static  ngx_http_stat_arg_t ngx_http_stat_param_args[] = {
       ngx_null_string },
 };
 
-static ngx_event_t timer;
+static ngx_event_t timer = {0};
 
 /** Metrics & acc functions & statistics {{{ */
 static ngx_http_stat_aggregate_t ngx_http_stat_aggregates[] = {
