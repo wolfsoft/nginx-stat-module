@@ -71,6 +71,7 @@ static ngx_int_t ngx_http_stat_shared_init(ngx_shm_zone_t *shm_zone,
 static ngx_int_t ngx_http_stat_add_variables(ngx_conf_t *cf);
 static ngx_int_t ngx_http_stat_init(ngx_conf_t *cf);
 static ngx_int_t ngx_http_stat_process_init(ngx_cycle_t *cycle);
+static ngx_int_t ngx_http_stat_process_exit(ngx_cycle_t *cycle);
 
 static void *ngx_http_stat_create_main_conf(ngx_conf_t *cf);
 static void *ngx_http_stat_create_srv_conf(ngx_conf_t *cf);
@@ -201,7 +202,7 @@ ngx_module_t ngx_http_stat_module = {
     ngx_http_stat_process_init,        /* init process */
     NULL,                              /* init thread */
     NULL,                              /* exit thread */
-    NULL,                              /* exit process */
+    ngx_http_stat_process_exit,        /* exit process */
     NULL,                              /* exit master */
     NGX_MODULE_V1_PADDING
 };
@@ -408,6 +409,10 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
+    if (timer.handler) {
+        ngx_del_timer(&timer);
+    }
+
     ngx_memzero(&timer, sizeof(timer));
 
     if (smcf->protocol.len > sizeof("influx/") - 1 &&
@@ -427,22 +432,20 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
 
     ngx_add_timer(&timer, smcf->frequency);
 
-    ngx_pool_cleanup_t *cln = ngx_pool_cleanup_add(cycle->pool, 0);
-    if (cln == NULL) {
-        return NGX_ERROR;
-    }
-    cln->handler = ngx_http_stat_cleanup;
-    cln->data = smcf;
-
     return NGX_OK;
 }
 
-static void ngx_http_stat_cleanup(void *data) {
-    ngx_http_stat_main_conf_t *smcf = data;
-
-    if (smcf->enable) {
+static
+ngx_int_t
+ngx_http_stat_process_exit(ngx_cycle_t *cycle)
+{
+    if (timer.handler) {
         ngx_del_timer(&timer);
     }
+
+    ngx_memzero(&timer, sizeof(timer));
+
+    return NGX_OK;
 }
 
 static
