@@ -409,17 +409,17 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
         return NGX_OK;
     }
 
-    if (timer.handler) {
+    if (smcf->timer.handler) {
         return NGX_OK;
     }
 
-    ngx_memzero(&timer, sizeof(timer));
+    ngx_memzero(&smcf->timer, sizeof(ngx_event_t));
 
     if (smcf->protocol.len > sizeof("influx/") - 1 &&
             ngx_strncmp(smcf->protocol.data, "influx/udp",
                 sizeof("influx/udp") - 1) == 0)
     {
-        timer.handler = ngx_http_influx_udp_timer_handler;
+        smcf->timer.handler = ngx_http_influx_udp_timer_handler;
     } else {
         ngx_log_error(NGX_LOG_CRIT, cycle->log, 0,
             "a protocol does not supported \"%V\", for server \"%V\"",
@@ -427,10 +427,11 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
         return NGX_ERROR;
     }
 
-    timer.data = smcf;
-    timer.log = cycle->log;
+    smcf->timer.data = smcf;
+    smcf->timer.log = cycle->log;
 
-    ngx_add_timer(&timer, smcf->frequency * 1000);
+    // Используем таймер из smcf
+    ngx_add_timer(&smcf->timer, smcf->frequency * 1000);
 
     return NGX_OK;
 }
@@ -441,11 +442,10 @@ ngx_http_stat_process_exit(ngx_cycle_t *cycle)
 {
     ngx_http_stat_main_conf_t *smcf = ngx_http_cycle_get_module_main_conf(cycle, ngx_http_stat_module);
 
-    if (timer.handler) {
-        ngx_del_timer(&timer);
+    if (smcf->timer.handler) {
+        ngx_del_timer(&smcf->timer);
+        ngx_memzero(&smcf->timer, sizeof(ngx_event_t));
     }
-
-    ngx_memzero(&timer, sizeof(timer));
 
     return NGX_OK;
 }
@@ -1658,7 +1658,7 @@ ngx_http_stat_config_arg_frequency(ngx_http_stat_ctx_t *ctx,
         void *data, ngx_str_t *value)
 {
     ngx_http_stat_main_conf_t *smcf = data;
-    smcf->frequency = ngx_atoi(value->data, value->len);
+    smcf->frequency = ngx_atoi(value->data, value->len) * 1000;
 
     return NGX_CONF_OK;
 }
@@ -2864,7 +2864,7 @@ ngx_http_stat_add_data_values(ngx_http_request_t *r,
         param = &((ngx_http_stat_param_t*)storage->params->elts)[statistic->param];
         value = (param->source != SOURCE_INTERNAL) ? values[param->source] :
             values[0];
-        ngx_http_stat_add_statistic(r, storage, statistic, ts, value, param->percentile);
+        ngx_http_stat_add_statistic(r, storage, ts, value, param->percentile);
     }
 }
 
