@@ -40,16 +40,17 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
     buffer = &smcf->buffer;
     b = buffer->start;
 
+    /** Lock {{{ */
+    ngx_shmtx_lock(&shpool->mutex);
+
     shpool = (ngx_slab_pool_t *) smcf->shared->shm.addr;
     storage = (ngx_http_stat_storage_t *) shpool->data;
 
     ts = ngx_time();
 
-    /** Lock {{{ */
-    ngx_shmtx_lock(&shpool->mutex);
 
     if ((ngx_uint_t) (ts - storage->event_time) * 1000 < smcf->frequency) {
-        ngx_shmtx_unlock(&shpool->mutex);
+//        ngx_shmtx_unlock(&shpool->mutex);
         goto yeild;
     }
 
@@ -113,7 +114,7 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
 
 	*b = '\0';
 
-    ngx_shmtx_unlock(&shpool->mutex);
+    // ngx_shmtx_unlock(&shpool->mutex);
 
     /** Lock }}} */
 
@@ -132,6 +133,7 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
     }
 
 yeild:
+    ngx_shmtx_unlock(&shpool->mutex);
     if (ngx_quit || ngx_terminate || ngx_exiting) {
         if (smcf->connection) {
             ngx_close_connection(smcf->connection);
