@@ -435,7 +435,7 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
     timer.data = smcf;
     timer.log = cycle->log;
 
-    ngx_add_timer(&timer, smcf->frequency);
+    ngx_add_timer(&timer, smcf->frequency * 1000);
 
     return NGX_OK;
 }
@@ -1668,7 +1668,7 @@ ngx_http_stat_config_arg_frequency(ngx_http_stat_ctx_t *ctx,
         void *data, ngx_str_t *value)
 {
     ngx_http_stat_main_conf_t *smcf = data;
-    smcf->frequency = ngx_atoi(value->data, value->len) * 1000;
+    smcf->frequency = ngx_atoi(value->data, value->len);
 
     return NGX_CONF_OK;
 }
