@@ -410,15 +410,10 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
     }
 
     if (timer.handler) {
-        ngx_del_timer(&timer);
+        return NGX_OK;
     }
 
     ngx_memzero(&timer, sizeof(timer));
-
-    if (smcf->connection) {
-        ngx_close_connection(smcf->connection);
-        smcf->connection = NULL;
-    }
 
     if (smcf->protocol.len > sizeof("influx/") - 1 &&
             ngx_strncmp(smcf->protocol.data, "influx/udp",
@@ -451,11 +446,6 @@ ngx_http_stat_process_exit(ngx_cycle_t *cycle)
     }
 
     ngx_memzero(&timer, sizeof(timer));
-
-    if (smcf && smcf->enable && smcf->connection) {
-        ngx_close_connection(smcf->connection);
-        smcf->connection = NULL;
-    }
 
     return NGX_OK;
 }
