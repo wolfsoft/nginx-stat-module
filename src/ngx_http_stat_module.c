@@ -428,8 +428,9 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
     smcf->timer.data = smcf;
     smcf->timer.log = cycle->log;
 
-    // Используем таймер из smcf
-    ngx_add_timer(&smcf->timer, smcf->frequency * 1000);
+    if (!smcf->exiting) {
+        ngx_add_timer(&smcf->timer, smcf->frequency * 1000);
+    }
 
     return NGX_OK;
 }
@@ -440,9 +441,13 @@ ngx_http_stat_process_exit(ngx_cycle_t *cycle)
 {
     ngx_http_stat_main_conf_t *smcf = ngx_http_cycle_get_module_main_conf(cycle, ngx_http_stat_module);
 
-    if (smcf->timer.handler) {
-        ngx_del_timer(&smcf->timer);
-        ngx_memzero(&smcf->timer, sizeof(ngx_event_t));
+    if (smcf) {
+        smcf->exiting = 1;
+        
+        if (smcf->timer.handler) {
+            ngx_del_timer(&smcf->timer);
+            ngx_memzero(&smcf->timer, sizeof(ngx_event_t));
+        }
     }
 
     return NGX_OK;

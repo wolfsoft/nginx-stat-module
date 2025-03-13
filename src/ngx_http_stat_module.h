@@ -103,7 +103,7 @@ typedef struct {
     ngx_connection_t          *connection;
 
     ngx_event_t               timer;
-
+    ngx_uint_t                exiting;
 } ngx_http_stat_main_conf_t;
 
 /** Srv conf */

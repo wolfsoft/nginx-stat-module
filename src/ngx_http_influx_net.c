@@ -145,7 +145,9 @@ yeild:
 
     ngx_time_update();
 
-    ngx_add_timer(ev, smcf->frequency * 1000);
+    if (!smcf->exiting) {
+        ngx_add_timer(ev, smcf->frequency * 1000);
+    }
 }
 
 
