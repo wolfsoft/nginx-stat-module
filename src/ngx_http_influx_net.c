@@ -40,6 +40,10 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
     buffer = &smcf->buffer;
     b = buffer->start;
 
+    if (ngx_quit || ngx_terminate || ngx_exiting || ngx_reconfigure) {
+        return;
+    }
+
     /** Lock {{{ */
     ngx_shmtx_lock(&shpool->mutex);
 
@@ -135,7 +139,7 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
 yeild:
     ngx_shmtx_unlock(&shpool->mutex);
 
-    if (ngx_quit || ngx_terminate || ngx_exiting) {
+    if (ngx_quit || ngx_terminate || ngx_exiting || ngx_reconfigure) {
         return;
     }
 
