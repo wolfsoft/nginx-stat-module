@@ -36,18 +36,26 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
     ngx_http_stat_statistic_t   *statistic;
 
     smcf = ev->data;
-
-    buffer = &smcf->buffer;
-    b = buffer->start;
+    
+    if (smcf->exiting) {
+        return;
+    }
 
     if (ngx_quit || ngx_terminate || ngx_exiting || ngx_reconfigure) {
         return;
     }
+    
+    shpool = (ngx_slab_pool_t *) smcf->shared->shm.addr;
+    if (shpool == NULL) {
+        return;
+    }
+
+    buffer = &smcf->buffer;
+    b = buffer->start;
 
     /** Lock {{{ */
     ngx_shmtx_lock(&shpool->mutex);
 
-    shpool = (ngx_slab_pool_t *) smcf->shared->shm.addr;
     storage = (ngx_http_stat_storage_t *) shpool->data;
 
     ts = ngx_time();
