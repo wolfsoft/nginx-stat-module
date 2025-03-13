@@ -268,8 +268,6 @@ static  ngx_http_stat_arg_t ngx_http_stat_param_args[] = {
       ngx_null_string },
 };
 
-static ngx_event_t timer = {0};
-
 /** Metrics & acc functions & statistics {{{ */
 static ngx_http_stat_aggregate_t ngx_http_stat_aggregates[] = {
 
@@ -567,7 +565,7 @@ ngx_http_stat_create_loc_conf(ngx_conf_t *cf)
         return NULL;
     }
 
-    if (cf->args == NULL || cf->args->nelts < 1) {
+    if (!cf->args) {
         return slcf;
     }
 
@@ -2864,7 +2862,7 @@ ngx_http_stat_add_data_values(ngx_http_request_t *r,
         param = &((ngx_http_stat_param_t*)storage->params->elts)[statistic->param];
         value = (param->source != SOURCE_INTERNAL) ? values[param->source] :
             values[0];
-        ngx_http_stat_add_statistic(r, storage, ts, value, param->percentile);
+        ngx_http_stat_add_statistic(r, storage, statistic, ts, value, param->percentile);
     }
 }
 

@@ -54,8 +54,8 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
         goto yeild;
     }
 
-    if (smcf->connection && smcf->connection->fd == NGX_INVALID_FILE) {
-        ngx_log_error(NGX_LOG_NOTICE, ev->log, 0, "re-init invalid connection");
+    if (smcf->connection) {
+        ngx_log_error(NGX_LOG_NOTICE, ev->log, 0, "re-init connection");
         ngx_close_connection(smcf->connection);
         smcf->connection = NULL;
     }
@@ -134,11 +134,8 @@ ngx_http_influx_udp_timer_handler(ngx_event_t *ev)
 
 yeild:
     ngx_shmtx_unlock(&shpool->mutex);
+
     if (ngx_quit || ngx_terminate || ngx_exiting) {
-        if (smcf->connection) {
-            ngx_close_connection(smcf->connection);
-            smcf->connection = NULL;
-        }
         return;
     }
 
@@ -157,15 +154,15 @@ ngx_http_influx_net_send_udp(ngx_http_stat_main_conf_t *smcf,
     u_char    *part, *next, *nl;
     ssize_t    n;
 
-    if (!smcf->connection && ngx_http_influx_net_connect_udp(smcf, log) != NGX_OK) {
+    if (smcf->connection) {
+        return NGX_ERROR;
+    }
+
+    if (ngx_http_influx_net_connect_udp(smcf, log) != NGX_OK) {
         ngx_log_error(NGX_LOG_ERR, log, 0,
                 "ngx_http_influx_net_connect_udp: connect to \"%V\" failed",
                 &smcf->server.name);
         goto failed;
-    }
-
-    if (!smcf->connection) {
-        return NGX_ERROR;
     }
 
     smcf->connection->data = smcf;
