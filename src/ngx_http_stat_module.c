@@ -198,13 +198,19 @@ ngx_module_t ngx_http_stat_module = {
     ngx_http_stat_commands,            /* module directives */
     NGX_HTTP_MODULE,                   /* module type */
     NULL,                              /* init master */
-    NULL,                              /* init module */
-    ngx_http_stat_process_init,        /* init process */
+// I have no idea what to do    
+//    NULL,                              /* init module */
+//    ngx_http_stat_process_init,        /* init process */
+    ngx_http_stat_process_init,        /* init module */
+    NULL,                              /* init process */
+
     NULL,                              /* init thread */
     NULL,                              /* exit thread */
-    ngx_http_stat_process_exit,        /* exit process */
-    NULL,                              /* exit master */
-    NGX_MODULE_V1_PADDING
+//    ngx_http_stat_process_exit,        /* exit process */
+    NULL,                                /* exit process */
+//    NULL,                              /* exit master */
+    ngx_http_stat_process_exit,        /* exit master */
+NGX_MODULE_V1_PADDING
 };
 
 static ngx_str_t stat_shared_name = ngx_string("_ngx_stat_module");
@@ -436,7 +442,7 @@ ngx_http_stat_process_init(ngx_cycle_t *cycle)
 }
 
 static
-ngx_int_t
+void
 ngx_http_stat_process_exit(ngx_cycle_t *cycle)
 {
     ngx_http_stat_main_conf_t *smcf = ngx_http_cycle_get_module_main_conf(cycle, ngx_http_stat_module);
@@ -449,8 +455,6 @@ ngx_http_stat_process_exit(ngx_cycle_t *cycle)
             ngx_memzero(&smcf->timer, sizeof(ngx_event_t));
         }
     }
-
-    return NGX_OK;
 }
 
 static
@@ -2917,16 +2921,19 @@ ngx_http_stat_handler(ngx_http_request_t *r)
     }
 
     shpool = (ngx_slab_pool_t*) smcf->shared->shm.addr;
+
+    ngx_shmtx_lock(&shpool->mutex);
+
     storage = (ngx_http_stat_storage_t*) shpool->data;
 
     ts = ngx_time();
 
     values = ngx_http_stat_get_sources_values(smcf, r);
     if (values == NULL) {
+        ngx_shmtx_unlock(&shpool->mutex);
         return NGX_OK;
     }
 
-    ngx_shmtx_lock(&shpool->mutex);
     ngx_http_stat_gc(smcf, ts);
 
     if (r == r->main) {
